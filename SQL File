@@ -1,1 +1,74 @@
+--which gender and age are using coupons and on what category. we are adding location so we can target coupons more effectivly.  
+--age groups = 18-30, 31-40, 41-50, 51-60, 61-70.
+(select gender, age, category, promo_code_used, location from consumerinsights
+WHERE gender = 'Male')
+;
 
+--separating customers by age groups, then determining how many customers are in each group. 
+create table age_groups as 
+(select  
+	gender,
+		CASE
+        WHEN Age BETWEEN 18 AND 30 THEN '18-30'
+        WHEN Age BETWEEN 31 AND 40 THEN '31-40'
+        WHEN Age BETWEEN 41 AND 50 THEN '41-50'
+		WHEN Age BETWEEN 51 AND 60 THEN '51-60'
+        WHEN Age BETWEEN 61 AND 70 THEN '61-70'
+    END AS Age_Range,
+    COUNT(*) AS Number_Of_People
+FROM
+   consumerinsights
+GROUP BY
+    Age_Range, gender
+ORDER BY age_range asc)
+;
+
+--Confirmed that females did not use any promo codes. 
+SELECT gender, location, promo_code_used
+FROM promo_ages_location
+WHERE gender = 'Female'
+;
+
+--Since data set states no females are using coupon codes, then we will do the analysis on men.
+--What age range of men has the highest percentage of coupon usage by state. 
+SELECT  
+    CASE
+        WHEN Age BETWEEN 18 AND 30 THEN '18-30'
+        WHEN Age BETWEEN 31 AND 40 THEN '31-40'
+        WHEN Age BETWEEN 41 AND 50 THEN '41-50'
+        WHEN Age BETWEEN 51 AND 60 THEN '51-60'
+        WHEN Age BETWEEN 61 AND 70 THEN '61-70'
+    END AS Age_Range,
+    COUNT(*) AS Number_Of_Males
+FROM consumerinsights
+WHERE gender = 'Male'
+GROUP BY 
+    Age_Range,
+    gender
+ORDER BY 
+    Age_Range ASC,
+    gender
+;
+
+--coupon % by location (state). Yes - 1, No - 0.
+--WHICH STATE HAS THE HIGHEST PERCETNAGE OF COUPON USERS (MALE)
+Create table promo_usage as
+(SELECT 
+    gender,
+    location,
+    100.0 * SUM(CASE WHEN promo_code_used = 'Yes' THEN 1 ELSE 0 END)
+	/ COUNT(*) AS yes_percentage       
+FROM consumerinsights
+WHERE gender = 'Male'
+GROUP BY gender, location
+ORDER by yes_percentage DESC)
+;
+
+
+SELECT a.age_range, a.gender, b.location, b.yes_percentage, b.gender
+FROM age_groups a
+INNER JOIN promo_usage b 
+ON a.gender = b.gender
+WHERE a.gender = 'Male'
+GROUP BY a.gender, b.location, a.age_range, b.yes_percentage, b.gender
+ORDER by b.yes_percentage DESC
